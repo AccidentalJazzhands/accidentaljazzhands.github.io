@@ -1,1 +1,66 @@
 # accidentaljazzhands.github.io
+<!--
+  Simple auto-start stream watcher
+-->
+
+<html>
+  <head>
+    <title>Just Watch</title>
+  </head>
+
+  <body>
+    <video
+      id="videoPlayer"
+      autoplay
+      controls
+      style="width: 500"
+    ></video>
+  </body>
+
+  <script>
+    // Predefined configuration
+    const WHEP_URL = 'https://b.siobud.com/api/whep'
+    const STREAM_KEY = 'donkstronomy'
+
+    window.watchStream = () => {
+      let peerConnection = new RTCPeerConnection()
+
+      peerConnection.addTransceiver('audio', {
+        direction: 'recvonly'
+      })
+
+      peerConnection.addTransceiver('video', {
+        direction: 'recvonly'
+      })
+
+      peerConnection.ontrack = function (event) {
+        document.getElementById('videoPlayer').srcObject =
+          event.streams[0]
+      }
+
+      peerConnection.createOffer().then(offer => {
+        peerConnection.setLocalDescription(offer)
+
+        fetch(WHEP_URL, {
+          method: 'POST',
+          body: offer.sdp,
+          headers: {
+            Authorization: `Bearer ${STREAM_KEY}`,
+            'Content-Type': 'application/sdp'
+          }
+        })
+          .then(r => r.text())
+          .then(answer => {
+            peerConnection.setRemoteDescription({
+              sdp: answer,
+              type: 'answer'
+            })
+          })
+      })
+    }
+
+    window.addEventListener('load', () => {
+      window.watchStream()
+    })
+  </script>
+</html>
